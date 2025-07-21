@@ -52,6 +52,56 @@ python src/train.py \
 * `loss_curve.png` — 训练/验证损失曲线
 * `prediction_plot.png` — 在测试集上的真实 vs. 预测曲线
 
+## 两种建模场景
+
+### 1. 预测下一个小时（单步预测）
+
+- 训练指令：
+  ```bash
+  python src/train.py \
+    --data-path data/raw/london_merged.csv \
+    --pred-horizon 1 \
+    --epochs 30 \
+    --save-dir outputs/1h
+  ```
+- 评估指标将仅对 `t+1` 的租借量进行计算。
+- 部署时在 Streamlit 侧边栏选择 `Prediction horizon = 1` 并将模型路径改为 `outputs/1h/model_best.pt`。
+
+### 2. 预测未来 6 小时（多步预测）
+
+- 训练指令：
+  ```bash
+  python src/train.py \
+    --data-path data/raw/london_merged.csv \
+    --pred-horizon 6 \
+    --epochs 30 \
+    --save-dir outputs/6h
+  ```
+- 模型输出为一个长度 6 的向量，分别对应 `t+1 ... t+6`。
+- 部署时在 Streamlit 选择 `Prediction horizon = 6` 并切换模型路径。
+
+---
+
+## 部署与可视化
+
+安装额外依赖：
+```bash
+pip install streamlit
+```
+运行应用：
+```bash
+streamlit run src/app.py --server.port 8501
+```
+然后在浏览器打开 `http://localhost:8501` 即可：
+
+1. 侧边栏配置模型权重、Scaler、数据集路径以及预测步长。
+2. 拖动滑块查看不同样本的 **真实 vs 预测** 对比曲线与 RMSE/MAE 指标。
+3. 页面下方展示 LSTM 网络结构文本摘要。
+
+![](docs/screenshot.png)
+
+> 生产环境可将 Streamlit 部署到云服务器或封装为 Docker 镜像。
+
 ## 部署示例
 
 经过训练的模型可轻松集成进后端或 Web 应用。示例：

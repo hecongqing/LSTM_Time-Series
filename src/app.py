@@ -4,10 +4,11 @@ import joblib
 import pandas as pd
 import numpy as np
 from pathlib import Path
+import requests
 
 from dataset import load_and_process, BikeDataset, create_features
-from model import LSTMBikePredictor
-from utils import rmse, mae
+# from model import LSTMBikePredictor  # Local model inference no longer used
+# from utils import rmse, mae  # Metrics computed directly with NumPy
 
 st.set_page_config(page_title="London Bike Demand Predictor", layout="wide")
 
@@ -30,19 +31,12 @@ data_path = st.sidebar.text_input(
 )
 pred_horizon = st.sidebar.selectbox("Prediction horizon", options=[1, 6], index=1)
 window_size = st.sidebar.number_input("Window size (hours)", value=24, step=1)
+# URL of the running FastAPI service delivering ONNX predictions
+server_url = st.sidebar.text_input("Inference API URL", value="http://localhost:8000")
 
-device = "cpu"
+# No local device needed when using remote inference
 
-# Load model & scaler
-@st.cache_resource
-def load_model(model_path: str, input_dim: int, horizon: int):
-    model = LSTMBikePredictor(input_dim=input_dim, output_dim=horizon)
-    state = torch.load(model_path, map_location=device)
-    model.load_state_dict(state)
-    model.to(device)
-    model.eval()
-    return model
-
+# Load scaler
 @st.cache_resource
 def load_scaler(path: str):
     return joblib.load(path)
@@ -87,15 +81,24 @@ scaled = scaler.transform(df_full[feature_cols])
 # Build dataset for prediction (whole)
 ds = BikeDataset(scaled, window_size, pred_horizon)
 
-model = load_model(model_path, input_dim=scaled.shape[1], horizon=pred_horizon)
+# Local model loading removed – predictions are obtained via remote API
 
 st.sidebar.markdown("---")
 idx = st.sidebar.slider("Select sample index", min_value=0, max_value=len(ds) - 1, value=0)
 
-with torch.no_grad():
-    X, y_true = ds[idx]
-    X_tensor = torch.tensor(X).unsqueeze(0).to(device)
-    y_pred = model(X_tensor).cpu().numpy().flatten()
+X, y_true = ds[idx]
+# Send prediction request to the FastAPI ONNX inference server
+try:
+    response = requests.post(
+        f"{server_url}/predict",
+        json={"data": X.tolist()},
+        timeout=10,
+    )
+    response.raise_for_status()
+    y_pred = np.array(response.json()["prediction"])
+except Exception as e:
+    st.error(f"Inference request failed: {e}")
+    st.stop()
 
 y_true = y_true[: pred_horizon]
 
@@ -122,5 +125,4 @@ with col2:
 
 st.markdown("---")
 
-st.subheader("Model Architecture")
-st.text(str(model))
+# Removed local model architecture display because inference now happens remotely

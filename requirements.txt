@@ -11,3 +11,4 @@ onnxruntime
 fastapi
 uvicorn[standard]
 onnx
+requests

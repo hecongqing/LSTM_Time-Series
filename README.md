@@ -123,6 +123,55 @@ with torch.no_grad():
 print(preds)
 ```
 
+## ONNX 部署（FastAPI + ONNX Runtime）
+
+为了在生产环境中获得更高的推理性能并与语言无关，本项目提供了 **ONNX 导出与推理 API** 示例，结合 FastAPI & onnxruntime 轻量级上线。
+
+1. **导出模型至 ONNX**（假设已完成模型训练并得到 `model_best.pt`）：
+
+   ```bash
+   python deploy/convert_to_onnx.py \
+     --model-path outputs/model_best.pt \
+     --onnx-path outputs/model_best.onnx \
+     --input-dim 13 --window-size 24 --pred-horizon 6
+   ```
+
+   运行完成后将在 `outputs/` 生成 `model_best.onnx` 文件。
+
+2. **安装推理依赖**（若已按 `requirements.txt` 全量安装，可跳过）：
+
+   ```bash
+   pip install onnxruntime fastapi uvicorn[standard]
+   ```
+
+3. **启动 FastAPI 推理服务**（默认为 CPU，可根据环境修改 `providers` 列表以启用 CUDA / TensorRT 等）：
+
+   ```bash
+   python -m uvicorn deploy.onnx_server:app --host 0.0.0.0 --port 8000
+   ```
+
+   服务启动后，可通过 `POST /predict` 发送形状为 `(WINDOW_SIZE, INPUT_DIM)` 的二维列表（JSON）获得预测结果：
+
+   ```json
+   {
+     "data": [[0.42, 0.13, ...], [...], ...]
+   }
+   ```
+
+   返回：
+
+   ```json
+   { "prediction": [0.21, 0.19, ...] }
+   ```
+
+4. **在 Streamlit 前端接入远程推理**：
+
+   打开 `src/app.py` 对应的 Streamlit 应用，在侧边栏的 **Inference API URL** 输入运行中的 FastAPI 地址（如 `http://localhost:8000`），即可实时调用 ONNX 服务并展示预测结果。
+
+> 如需部署到容器或云环境，可将 `deploy/onnx_server.py` 打包为 Docker 镜像，或挂载 NGINX / Traefik 进行反向代理与负载均衡。
+
+---
+
 ## 参考文献
 
 * [London Bike Sharing Dataset on Kaggle](https://www.kaggle.com/datasets/hmavrodiev/london-bike-sharing-dataset)

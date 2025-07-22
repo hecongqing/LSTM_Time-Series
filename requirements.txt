@@ -7,3 +7,7 @@ seaborn
 tqdm
 joblib
 streamlit
+onnxruntime
+fastapi
+uvicorn[standard]
+onnx

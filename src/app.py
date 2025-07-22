@@ -84,8 +84,20 @@ ds = BikeDataset(scaled, window_size, pred_horizon)
 # Local model loading removed – predictions are obtained via remote API
 
 st.sidebar.markdown("---")
-idx = st.sidebar.slider("Select sample index", min_value=0, max_value=len(ds) - 1, value=0)
+# Build a mapping from dataset index to the corresponding timestamp (window end time)
+window_end_timestamps = (
+    df_full["timestamp"].iloc[window_size - 1 : len(df_full) - pred_horizon].dt.strftime("%Y-%m-%d %H:%M")
+)
+# Convert to list for deterministic order in the UI
+timestamp_options = window_end_timestamps.tolist()
 
+selected_time = st.sidebar.selectbox(
+    "选择时间窗口（窗口结束时间）", options=timestamp_options, index=0
+)
+# Map the selected timestamp back to the dataset index
+idx = timestamp_options.index(selected_time)
+
+# X, y preparation remains the same
 X, y_true = ds[idx]
 # Send prediction request to the FastAPI ONNX inference server
 try:

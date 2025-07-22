@@ -90,13 +90,13 @@ pip install streamlit
 ```
 运行应用：
 ```bash
-streamlit run src/app.py --server.port 8501
+streamlit run src/app.py --server.port 6006
 ```
-然后在浏览器打开 `http://localhost:8501` 即可：
+然后在浏览器打开 `http://localhost:6006` 即可：
 
 1. 侧边栏配置模型权重、Scaler、数据集路径以及预测步长。
-2. 拖动滑块查看不同样本的 **真实 vs 预测** 对比曲线与 RMSE/MAE 指标。
-3. 页面下方展示 LSTM 网络结构文本摘要。
+2. 通过下拉框选择时间窗口（窗口结束时间）查看不同样本的 **真实 vs 预测** 对比曲线与 RMSE/MAE 指标。
+3. 前端会向 FastAPI 推理服务发送请求并实时展示返回的预测结果。
 
 ![](docs/screenshot.png)
 
